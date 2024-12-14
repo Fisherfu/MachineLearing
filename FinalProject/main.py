@@ -1,6 +1,9 @@
-import transformerCNN
+import transformerCNN as tc 
+import biLstmAttention as bla
 import pandas as pd 
 from sklearn.model_selection import train_test_split
+import tensorflow as tf 
+import xBooster as xb
 # Example usage
 file_path = '../Reviews.csv'
 
@@ -16,23 +19,70 @@ texts, labels = df['Text'], df['Score']
 
 # Initialize and preprocess data
 def transformerAddCNN():
-    classifier = transformerCNN.TransformerCNNClassifier()
-    X, masks, y = classifier.preprocess_data(texts, labels)
+    classifier = tc.TransformerCNNClassifier()
+    X, masks, y = classifier.preprocess_data()
 
+    # Split data
     X_train, X_test, y_train, y_test, mask_train, mask_test = train_test_split(
-        X, y, masks, test_size=0.2, random_state=42
+        X.numpy(), y, masks.numpy(), test_size=0.2, random_state=42
     )
+
+    # Convert back to TensorFlow tensors
+    X_train, X_test = tf.convert_to_tensor(X_train), tf.convert_to_tensor(X_test)
+    mask_train, mask_test = tf.convert_to_tensor(mask_train), tf.convert_to_tensor(mask_test)
+    print("X_train shape:", X_train.shape)
+    print("mask_train shape:", mask_train.shape)
+    # Build, train, and evaluate the model
+    classifier.build_model()
+    history = classifier.train([X_train, mask_train], y_train, [X_test, mask_test], y_test)
+    classifier.evaluate([X_test, mask_test], y_test)
+    classifier.plot_history(history)
+
+    # Save predictions
+    predictions = classifier.predict([X_test, mask_test])
+    pd.DataFrame({'Actual': y_test, 'Predicted': predictions}).to_csv('evaluation_results.csv', index=False)
+    classifier.model.save('transformer_cnn_model.h5')
+
+
+def biLSTMAddAttention():
+    classifier = bla.TransformerBiLSTMAttentionClassifier()
+    X, masks, y = classifier.preprocess_data()
+
+    # Split data
+    X_train, X_test, y_train, y_test, mask_train, mask_test = train_test_split(
+        X.numpy(), y, masks.numpy(), test_size=0.2, random_state=42
+    )
+
+    # Convert back to TensorFlow tensors
+    X_train, X_test = tf.convert_to_tensor(X_train), tf.convert_to_tensor(X_test)
+    mask_train, mask_test = tf.convert_to_tensor(mask_train), tf.convert_to_tensor(mask_test)
 
     # Build, train, and evaluate the model
     classifier.build_model()
     history = classifier.train([X_train, mask_train], y_train, [X_test, mask_test], y_test)
     classifier.evaluate([X_test, mask_test], y_test)
 
-def biLSTMAddAttention():
-    pass 
+    # Plot training history
+    classifier.plot_history(history)
+
+    # Save predictions
+    predictions = classifier.predict([X_test, mask_test])
+    pd.DataFrame({'Actual': y_test, 'Predicted': predictions}).to_csv('bilstm_attention_results.csv', index=False)
+    classifier.model.save('bilstm_attention_model.h5')
+
 
 def XBoosterClassfiy():
-    pass 
+    classifier = xb.XGBoostClassifier()
+    X, y = classifier.preprocess_data()
+
+    # Split data
+    X_train, X_test, y_train, y_test = train_test_split(
+        X, y, test_size=0.2, random_state=42
+    )
+
+    # Train and evaluate the model
+    classifier.train(X_train, y_train, X_test, y_test)
+
 
 if __name__=="__main__":
 

@@ -1,11 +1,11 @@
 import pandas as pd
 import tensorflow as tf
-from tensorflow.keras.models import Model
-from tensorflow.keras.layers import Layer
-from tensorflow.keras.layers import Input, Conv1D, GlobalMaxPooling1D, Dense, Dropout
+from tensorflow.python.keras.models import Model
+from tensorflow.python.keras.layers import Layer
+from tensorflow.python.keras.layers import Input, Conv1D, GlobalMaxPooling1D, Dense, Dropout
 from transformers import TFBertModel, BertTokenizer
 from sklearn.model_selection import train_test_split
-from tensorflow.keras.callbacks import ReduceLROnPlateau, EarlyStopping
+from tensorflow.python.keras.callbacks import ReduceLROnPlateau, EarlyStopping
 import matplotlib.pyplot as plt
 
 # 為了可以傳入keras input layer
@@ -98,21 +98,21 @@ class TransformerCNNClassifier:
         predictions = self.model.predict(X)
         return predictions.argmax(axis=-1)  # Return the class with the highest probability
 
-def plot_history(history):
-    plt.figure(figsize=(12, 5))
-    # Accuracy
-    plt.subplot(1, 2, 1)
-    plt.plot(history.history['accuracy'], label='Train Accuracy')
-    plt.plot(history.history['val_accuracy'], label='Validation Accuracy')
-    plt.title('Accuracy')
-    plt.legend()
-    # Loss
-    plt.subplot(1, 2, 2)
-    plt.plot(history.history['loss'], label='Train Loss')
-    plt.plot(history.history['val_loss'], label='Validation Loss')
-    plt.title('Loss')
-    plt.legend()
-    plt.show()
+    def plot_history(history):
+        plt.figure(figsize=(12, 5))
+        # Accuracy
+        plt.subplot(1, 2, 1)
+        plt.plot(history.history['accuracy'], label='Train Accuracy')
+        plt.plot(history.history['val_accuracy'], label='Validation Accuracy')
+        plt.title('Accuracy')
+        plt.legend()
+        # Loss
+        plt.subplot(1, 2, 2)
+        plt.plot(history.history['loss'], label='Train Loss')
+        plt.plot(history.history['val_loss'], label='Validation Loss')
+        plt.title('Loss')
+        plt.legend()
+        plt.show()
 
 if __name__ == "__main__":
     classifier = TransformerCNNClassifier()
@@ -132,7 +132,7 @@ if __name__ == "__main__":
     classifier.build_model()
     history = classifier.train([X_train, mask_train], y_train, [X_test, mask_test], y_test)
     classifier.evaluate([X_test, mask_test], y_test)
-    plot_history(history)
+    classifier.plot_history(history)
 
     # Save predictions
     predictions = classifier.predict([X_test, mask_test])
