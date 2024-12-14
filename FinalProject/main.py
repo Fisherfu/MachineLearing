@@ -5,7 +5,7 @@ from sklearn.model_selection import train_test_split
 import tensorflow as tf 
 import xBooster as xb
 # Example usage
-file_path = '../Reviews.csv'
+file_path = './Reviews.csv'
 
 
 # Load dataset
@@ -88,8 +88,9 @@ if __name__=="__main__":
 
     while True: 
         modelNumber = str(input("Please input your modelType\n \
-        1.TransFormer+CNN 2. biLSTM+Attension 3. XBooster 4.All"))
+        1.TransFormer+CNN 2. biLSTM+Attension 3. XBooster 4.All\n"))
         assert all([str(string).isdigit() for string in modelNumber]),"Please input number"
+        modelNumber = int(modelNumber)
         if modelNumber == 1:
             transformerAddCNN()
         elif modelNumber == 2: 

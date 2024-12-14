@@ -1,10 +1,10 @@
 import pandas as pd
 import tensorflow as tf
-from tensorflow.python.keras.models import Model
-from tensorflow.python.keras.layers import Layer, Input, Bidirectional, LSTM, Dense, Dropout, Attention
+from tensorflow.keras.models import Model
+from tensorflow.keras.layers import Layer, Input, Bidirectional, LSTM, Dense, Dropout, Attention
 from transformers import TFBertModel, BertTokenizer
 from sklearn.model_selection import train_test_split
-from tensorflow.python.keras.callbacks import ReduceLROnPlateau, EarlyStopping
+from tensorflow.keras.callbacks import ReduceLROnPlateau, EarlyStopping
 import matplotlib.pyplot as plt
 import transformerCNN as tc 
 # 繼承 BertLayer
