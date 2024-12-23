@@ -6,6 +6,7 @@ from tensorflow.keras.layers import Input, Conv1D, GlobalMaxPooling1D, Dense, Dr
 from transformers import TFBertModel, BertTokenizer
 from sklearn.model_selection import train_test_split
 from tensorflow.keras.callbacks import ReduceLROnPlateau, EarlyStopping
+from tensorflow.keras.optimizers import AdamW
 import matplotlib.pyplot as plt
 
 # 為了可以傳入keras input layer
@@ -28,28 +29,21 @@ class TransformerCNNClassifier:
         self.file_path = file_path
     
     def preprocess_data(self):
-        # Load and preprocess data
+        # 加載數據並進行預處理
         df = pd.read_csv(self.file_path)
         df = df[['Text', 'Score']].dropna().head(10000)
 
-        # Use original 1-5 scores for multi-class classification
-        texts, labels = df['Text'], df['Score']
+        # 將標籤從 1-5 映射到 0-4
+        texts, labels = df['Text'], df['Score'] - 1
 
         # 清理文本數據
         texts = texts.str.replace(r'[^a-zA-Z0-9\s]', '', regex=True).str.strip()
-        
         texts = texts.apply(lambda x: ' '.join(x.split()[:self.max_len]))  # 截斷長文本
 
-        # Tokenizer
+        # 使用 Tokenizer 處理文本
         encodings = self.tokenizer(
             list(texts), truncation=True, padding=True, max_length=self.max_len, return_tensors='tf'
         )
-
-        # 檢查 input_ids 是否超出範圍
-        vocab_size = self.tokenizer.vocab_size
-        input_ids = encodings['input_ids'].numpy()
-        if (input_ids >= vocab_size).any():
-            raise ValueError("Input IDs exceed vocabulary size. Check your tokenizer or input data.")
 
         return encodings['input_ids'], encodings['attention_mask'], labels.values
     def build_model(self):
@@ -59,21 +53,26 @@ class TransformerCNNClassifier:
 
         bert_output = BertLayer(bert_model_name='bert-base-uncased')([input_ids, attention_mask])      
 
+        # CNN layers with Dropout
         cnn_layer = Conv1D(filters=128, kernel_size=3, activation="relu")(bert_output)
+        cnn_layer = Dropout(0.3)(cnn_layer)
         cnn_layer = GlobalMaxPooling1D()(cnn_layer)
-        
-        dense_layer = Dense(64, activation="relu")(cnn_layer)
+
+        # Fully connected layers
+        dense_layer = Dense(128, activation="relu")(cnn_layer)
         dense_layer = Dropout(0.5)(dense_layer)
-        output = Dense(self.num_classes+1, activation="softmax")(dense_layer)
-        
+        output = Dense(self.num_classes, activation="softmax")(dense_layer)
+
+        # Compile model with AdamW
+        optimizer = AdamW(learning_rate=self.learning_rate, weight_decay=1e-4)
         self.model = Model(inputs=[input_ids, attention_mask], outputs=output)
         self.model.compile(
-            optimizer=tf.keras.optimizers.Adam(learning_rate=self.learning_rate),
+            optimizer=optimizer,
             loss='sparse_categorical_crossentropy',
             metrics=['accuracy']
         )
     
-    def train(self, X_train, y_train, X_val, y_val, batch_size=16, epochs=5):
+    def train(self, X_train, y_train, X_val, y_val, batch_size=16, epochs=100):
         # Define callbacks
         callbacks = [
             ReduceLROnPlateau(monitor='val_loss', factor=0.3, patience=3, min_lr=1e-7),
@@ -98,7 +97,7 @@ class TransformerCNNClassifier:
         predictions = self.model.predict(X)
         return predictions.argmax(axis=-1)  # Return the class with the highest probability
 
-    def plot_history(history):
+    def plot_history(self,history):
         plt.figure(figsize=(12, 5))
         # Accuracy
         plt.subplot(1, 2, 1)
