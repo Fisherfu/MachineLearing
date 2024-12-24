@@ -11,22 +11,31 @@ import matplotlib.pyplot as plt
 
 # 為了可以傳入keras input layer
 class BertLayer(Layer):
-    def __init__(self, bert_model_name='bert-base-uncased', **kwargs):
+    def __init__(self, bert_model_name='bert-base-uncased', trainable_layers=4, **kwargs):
         super(BertLayer, self).__init__(**kwargs)
         self.bert = TFBertModel.from_pretrained(bert_model_name)
+
+        # 將 BERT 的部分層設置為不可訓練
+        total_layers = len(self.bert.bert.encoder.layer)  # BERT 的總層數
+        for idx, layer in enumerate(self.bert.bert.encoder.layer):
+            if idx < total_layers - trainable_layers:
+                layer.trainable = False
 
     def call(self, inputs):
         input_ids, attention_mask = inputs
         outputs = self.bert(input_ids=input_ids, attention_mask=attention_mask)
-        return outputs.last_hidden_state  # 返回 [CLS] token 的嵌入
+        return outputs.last_hidden_state   # 使用池化輸出
+  # 使用池化輸出
+
 class TransformerCNNClassifier:
-    def __init__(self, max_len=128, num_classes=5, learning_rate=2e-5, file_path='./Reviews.csv'):
+    def __init__(self, max_len=512, num_classes=5, learning_rate=2e-5, file_path='./Reviews.csv'):
         self.max_len = max_len
         self.num_classes = num_classes
         self.learning_rate = learning_rate
         self.tokenizer = BertTokenizer.from_pretrained('bert-base-uncased')
         self.model = None
         self.file_path = file_path
+    
     
     def preprocess_data(self):
         # 加載數據並進行預處理
@@ -37,7 +46,7 @@ class TransformerCNNClassifier:
         texts, labels = df['Text'], df['Score'] - 1
 
         # 清理文本數據
-        texts = texts.str.replace(r'[^a-zA-Z0-9\s]', '', regex=True).str.strip()
+        texts = texts.str.replace(r'[^a-zA-Z0-9\s]', '', regex=True).str.strip().str.lower()
         texts = texts.apply(lambda x: ' '.join(x.split()[:self.max_len]))  # 截斷長文本
 
         # 使用 Tokenizer 處理文本
@@ -72,7 +81,7 @@ class TransformerCNNClassifier:
             metrics=['accuracy']
         )
     
-    def train(self, X_train, y_train, X_val, y_val, batch_size=16, epochs=100):
+    def train(self, X_train, y_train, X_val, y_val, batch_size=16, epochs=20):
         # Define callbacks
         callbacks = [
             ReduceLROnPlateau(monitor='val_loss', factor=0.3, patience=3, min_lr=1e-7),
